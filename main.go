@@ -45,25 +45,19 @@ func main() {
 	startButton := startButtonObject.(*gtk.Button)
 	stopButton := stopButtonObject.(*gtk.Button)
 
-	labelObject, err := builder.GetObject("label")
-	if err != nil {
-		log.Fatal("Error:", err)
-	}
-
-	label := labelObject.(*gtk.Label)
-	go updateActiveSession(label)
+	go updateActiveSession(builder)
 	startButton.Connect("clicked", func() {
-		startSession()
+		startSession(builder)
 	})
 	stopButton.Connect("clicked", func() {
-		stopSession()
+		stopSession(builder)
 	})
 
 	ticker := time.NewTicker(5 * time.Second)
 	go func() {
 		for {
 			<-ticker.C
-			updateActiveSession(label)
+			updateActiveSession(builder)
 		}
 	}()
 
@@ -71,7 +65,7 @@ func main() {
 	gtk.Main()
 }
 
-func updateActiveSession(label *gtk.Label) {
+func updateActiveSession(builder *gtk.Builder) {
 	resp, err := http.Get("http://localhost:8090/active-interval")
 	if err != nil {
 		log.Print(err)
@@ -92,29 +86,48 @@ func updateActiveSession(label *gtk.Label) {
 	}
 	defer resp.Body.Close()
 
+	labelObject, err := builder.GetObject("session_label")
+	if err != nil {
+		log.Fatal("Error:", err)
+	}
+	sessionLabel := labelObject.(*gtk.Label)
+
+	durationLabelObject, err := builder.GetObject("duration_label")
+	if err != nil {
+		log.Fatal("Error:", err)
+	}
+	durationLabel := durationLabelObject.(*gtk.Label)
+
 	if string(body) != "null" {
 		hour, minute, _ := message.Clock()
 		minuteString := strconv.Itoa(minute)
 		if minute < 10 {
 			minuteString = "0" + minuteString
 		}
-		newLabel := "Started: " + strconv.Itoa(hour) + ":" + minuteString
-		label.SetLabel(newLabel)
+		newSessionLabel := "Started: " + strconv.Itoa(hour) + ":" + minuteString
+		sessionLabel.SetLabel(newSessionLabel)
+
+		duration := time.Since(message).Round(time.Minute)
+		newDurationLabel := "Duration: " + duration.String()
+		durationLabel.SetLabel(newDurationLabel)
 	} else {
-		label.SetLabel("No active interval")
+		sessionLabel.SetLabel("No active interval")
+		durationLabel.SetLabel("")
 	}
 }
 
-func startSession() {
+func startSession(builder *gtk.Builder) {
 	_, err := http.Get("http://localhost:8090/start")
 	if err != nil {
 		log.Print(err)
 	}
+	go updateActiveSession(builder)
 }
 
-func stopSession() {
+func stopSession(builder *gtk.Builder) {
 	_, err := http.Get("http://localhost:8090/stop")
 	if err != nil {
 		log.Print(err)
 	}
+	go updateActiveSession(builder)
 }

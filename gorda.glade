@@ -86,11 +86,11 @@ Author: Maxim Romanov
             <property name="margin-top">5</property>
             <property name="margin-bottom">5</property>
             <child>
-              <object class="GtkLabel" id="label">
+              <object class="GtkLabel" id="session_label">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
                 <property name="margin-end">5</property>
-                <property name="label" translatable="yes">label</property>
+                <property name="label" translatable="yes">session_label</property>
                 <attributes>
                   <attribute name="scale" value="2"/>
                 </attributes>
@@ -142,6 +142,21 @@ Author: Maxim Romanov
                 <property name="expand">False</property>
                 <property name="fill">True</property>
                 <property name="position">3</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="duration_label">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="label" translatable="yes">duration_label</property>
+                <attributes>
+                  <attribute name="scale" value="2"/>
+                </attributes>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">4</property>
               </packing>
             </child>
           </object>
