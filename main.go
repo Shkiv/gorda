@@ -46,6 +46,8 @@ func main() {
 	stopButton := stopButtonObject.(*gtk.Button)
 
 	go updateActiveSession(builder)
+	go updateSessions(builder)
+
 	startButton.Connect("clicked", func() {
 		startSession(builder)
 	})
@@ -58,6 +60,7 @@ func main() {
 		for {
 			<-ticker.C
 			updateActiveSession(builder)
+			updateSessions(builder)
 		}
 	}()
 
@@ -116,12 +119,57 @@ func updateActiveSession(builder *gtk.Builder) {
 	}
 }
 
+func updateSessions(builder *gtk.Builder) {
+	type session struct {
+		Start time.Time
+		End   time.Time
+	}
+
+	resp, err := http.Get("http://localhost:8090/intervals")
+	if err != nil {
+		log.Print(err)
+		return
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Print(err)
+		return
+	}
+
+	var sessions []session
+	err = json.Unmarshal(body, &sessions)
+	if err != nil {
+		log.Print(err)
+		return
+	}
+	defer resp.Body.Close()
+
+	listBoxObject, err := builder.GetObject("session_list")
+	if err != nil {
+		log.Fatal(err)
+	}
+	listBox := listBoxObject.(*gtk.ListBox)
+	listBox.GetChildren().Foreach(func(item interface{}) {
+		item.(*gtk.Widget).Destroy()
+	})
+
+	for i, session := range sessions {
+		label, err := gtk.LabelNew(session.Start.String() + " " + session.End.String())
+		if err != nil {
+			log.Fatal(err)
+		}
+		listBox.Insert(label, i)
+	}
+	listBox.ShowAll()
+}
+
 func startSession(builder *gtk.Builder) {
 	_, err := http.Get("http://localhost:8090/start")
 	if err != nil {
 		log.Print(err)
 	}
 	go updateActiveSession(builder)
+	go updateSessions(builder)
 }
 
 func stopSession(builder *gtk.Builder) {
@@ -130,4 +178,5 @@ func stopSession(builder *gtk.Builder) {
 		log.Print(err)
 	}
 	go updateActiveSession(builder)
+	go updateSessions(builder)
 }
