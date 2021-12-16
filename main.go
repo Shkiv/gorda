@@ -11,6 +11,11 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 )
 
+type session struct {
+	Start time.Time
+	End   time.Time
+}
+
 func main() {
 	gtk.Init(nil)
 
@@ -119,30 +124,30 @@ func updateActiveSession(builder *gtk.Builder) {
 	}
 }
 
-func updateSessions(builder *gtk.Builder) {
-	type session struct {
-		Start time.Time
-		End   time.Time
-	}
-
+func getSessions() ([]session, error) {
 	resp, err := http.Get("http://localhost:8090/intervals")
 	if err != nil {
-		log.Print(err)
-		return
+		return nil, err
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Print(err)
-		return
+		return nil, err
 	}
 
 	var sessions []session
 	err = json.Unmarshal(body, &sessions)
 	if err != nil {
-		log.Print(err)
-		return
+		return nil, err
 	}
 	defer resp.Body.Close()
+	return sessions, nil
+}
+
+func updateSessions(builder *gtk.Builder) {
+	sessions, err := getSessions()
+	if err != nil {
+		log.Print(err)
+	}
 
 	listBoxObject, err := builder.GetObject("session_list")
 	if err != nil {
