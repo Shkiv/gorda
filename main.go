@@ -151,12 +151,21 @@ func updateSessions(builder *gtk.Builder) {
 		endLabel, err := gtk.LabelNew("End: " + session.End.Format(clockLayout))
 		handleFatalError(err)
 
-		separator, err := gtk.SeparatorNew(gtk.ORIENTATION_VERTICAL)
+		separator0, err := gtk.SeparatorNew(gtk.ORIENTATION_VERTICAL)
+		handleFatalError(err)
+
+		duration := session.End.Sub(session.Start).Round(time.Second)
+		durationLabel, err := gtk.LabelNew("Duration: " + duration.String())
+		handleFatalError(err)
+
+		separator1, err := gtk.SeparatorNew(gtk.ORIENTATION_VERTICAL)
 		handleFatalError(err)
 
 		box.Add(startLabel)
-		box.Add(separator)
+		box.Add(separator0)
 		box.Add(endLabel)
+		box.Add(separator1)
+		box.Add(durationLabel)
 		listBox.Insert(box, i)
 	}
 	listBox.ShowAll()
