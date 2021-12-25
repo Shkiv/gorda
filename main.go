@@ -20,19 +20,13 @@ func main() {
 	gtk.Init(nil)
 
 	builder, err := gtk.BuilderNew()
-	if err != nil {
-		log.Fatal("Error:", err)
-	}
+	handleFatalError(err)
 
 	err = builder.AddFromFile("gorda.glade")
-	if err != nil {
-		log.Fatal("Error:", err)
-	}
+	handleFatalError(err)
 
 	windowObject, err := builder.GetObject("main_window")
-	if err != nil {
-		log.Fatal("Error:", err)
-	}
+	handleFatalError(err)
 
 	window := windowObject.(*gtk.Window)
 	window.Connect("destroy", func() {
@@ -40,13 +34,11 @@ func main() {
 	})
 
 	startButtonObject, err := builder.GetObject("start_button")
-	if err != nil {
-		log.Fatal("Error:", err)
-	}
+	handleFatalError(err)
+
 	stopButtonObject, err := builder.GetObject("stop_button")
-	if err != nil {
-		log.Fatal("Error:", err)
-	}
+	handleFatalError(err)
+
 	startButton := startButtonObject.(*gtk.Button)
 	stopButton := stopButtonObject.(*gtk.Button)
 
@@ -95,17 +87,13 @@ func updateActiveSession(builder *gtk.Builder) {
 	defer resp.Body.Close()
 
 	labelObject, err := builder.GetObject("session_label")
-	if err != nil {
-		log.Fatal("Error:", err)
-	}
+	handleFatalError(err)
+
 	sessionLabel := labelObject.(*gtk.Label)
-
 	durationLabelObject, err := builder.GetObject("duration_label")
-	if err != nil {
-		log.Fatal("Error:", err)
-	}
-	durationLabel := durationLabelObject.(*gtk.Label)
+	handleFatalError(err)
 
+	durationLabel := durationLabelObject.(*gtk.Label)
 	if string(body) != "null" {
 		hour, minute, _ := message.Clock()
 		minuteString := strconv.Itoa(minute)
@@ -150,20 +138,30 @@ func updateSessions(builder *gtk.Builder) {
 	}
 
 	listBoxObject, err := builder.GetObject("session_list")
-	if err != nil {
-		log.Fatal(err)
-	}
+	handleFatalError(err)
+
 	listBox := listBoxObject.(*gtk.ListBox)
 	listBox.GetChildren().Foreach(func(item interface{}) {
 		item.(*gtk.Widget).Destroy()
 	})
 
 	for i, session := range sessions {
-		label, err := gtk.LabelNew(session.Start.String() + " " + session.End.String())
-		if err != nil {
-			log.Fatal(err)
-		}
-		listBox.Insert(label, i)
+		box, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 5)
+		handleFatalError(err)
+
+		startLabel, err := gtk.LabelNew("Start: " + clock(session.Start))
+		handleFatalError(err)
+
+		endLabel, err := gtk.LabelNew("End: " + clock(session.End))
+		handleFatalError(err)
+
+		separator, err := gtk.SeparatorNew(gtk.ORIENTATION_VERTICAL)
+		handleFatalError(err)
+
+		box.Add(startLabel)
+		box.Add(separator)
+		box.Add(endLabel)
+		listBox.Insert(box, i)
 	}
 	listBox.ShowAll()
 }
@@ -184,4 +182,20 @@ func stopSession(builder *gtk.Builder) {
 	}
 	go updateActiveSession(builder)
 	go updateSessions(builder)
+}
+
+func clock(time time.Time) string {
+	hour, minute, _ := time.Clock()
+	minuteString := strconv.Itoa(minute)
+	if minute < 10 {
+		minuteString = "0" + minuteString
+	}
+	clock := strconv.Itoa(hour) + ":" + minuteString
+	return clock
+}
+
+func handleFatalError(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
 }
