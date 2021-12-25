@@ -5,7 +5,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/gotk3/gotk3/gtk"
@@ -15,6 +14,8 @@ type session struct {
 	Start time.Time
 	End   time.Time
 }
+
+var clockLayout string = "15:04"
 
 func main() {
 	gtk.Init(nil)
@@ -95,12 +96,7 @@ func updateActiveSession(builder *gtk.Builder) {
 
 	durationLabel := durationLabelObject.(*gtk.Label)
 	if string(body) != "null" {
-		hour, minute, _ := message.Clock()
-		minuteString := strconv.Itoa(minute)
-		if minute < 10 {
-			minuteString = "0" + minuteString
-		}
-		newSessionLabel := "Started: " + strconv.Itoa(hour) + ":" + minuteString
+		newSessionLabel := "Started: " + message.Format(clockLayout)
 		sessionLabel.SetLabel(newSessionLabel)
 
 		duration := time.Since(message).Round(time.Minute)
@@ -149,10 +145,10 @@ func updateSessions(builder *gtk.Builder) {
 		box, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 5)
 		handleFatalError(err)
 
-		startLabel, err := gtk.LabelNew("Start: " + clock(session.Start))
+		startLabel, err := gtk.LabelNew("Start: " + session.Start.Format(clockLayout))
 		handleFatalError(err)
 
-		endLabel, err := gtk.LabelNew("End: " + clock(session.End))
+		endLabel, err := gtk.LabelNew("End: " + session.End.Format(clockLayout))
 		handleFatalError(err)
 
 		separator, err := gtk.SeparatorNew(gtk.ORIENTATION_VERTICAL)
@@ -182,16 +178,6 @@ func stopSession(builder *gtk.Builder) {
 	}
 	go updateActiveSession(builder)
 	go updateSessions(builder)
-}
-
-func clock(time time.Time) string {
-	hour, minute, _ := time.Clock()
-	minuteString := strconv.Itoa(minute)
-	if minute < 10 {
-		minuteString = "0" + minuteString
-	}
-	clock := strconv.Itoa(hour) + ":" + minuteString
-	return clock
 }
 
 func handleFatalError(err error) {
