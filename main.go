@@ -2,18 +2,26 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gotk3/gotk3/gtk"
 )
 
 type session struct {
+	UUID  uuid.UUID
 	Start time.Time
 	End   time.Time
 }
+
+const (
+	SPACING         int           = 5
+	UPDATE_INTERVAL time.Duration = 5 * time.Second
+)
 
 var clockLayout string = "15:04"
 
@@ -53,7 +61,7 @@ func main() {
 		stopSession(builder)
 	})
 
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(UPDATE_INTERVAL)
 	go func() {
 		for {
 			<-ticker.C
@@ -138,35 +146,48 @@ func updateSessions(builder *gtk.Builder) {
 
 	listBox := listBoxObject.(*gtk.ListBox)
 	listBox.GetChildren().Foreach(func(item interface{}) {
-		item.(*gtk.Widget).Destroy()
+		name, err := item.(*gtk.Widget).GetName()
+		handleFatalError(err)
+		_, err = getSessionById(sessions, name)
+		if err != nil {
+			item.(*gtk.Widget).Destroy()
+		}
 	})
 
 	for i, session := range sessions {
-		box, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 5)
-		handleFatalError(err)
+		_, err := getRowByName(listBox, session.UUID.String())
+		if err != nil {
+			box, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, SPACING)
+			handleFatalError(err)
 
-		startLabel, err := gtk.LabelNew("Start: " + session.Start.Format(clockLayout))
-		handleFatalError(err)
+			startLabel, err := gtk.LabelNew("Start: " + session.Start.Format(clockLayout))
+			handleFatalError(err)
 
-		endLabel, err := gtk.LabelNew("End: " + session.End.Format(clockLayout))
-		handleFatalError(err)
+			endLabel, err := gtk.LabelNew("End: " + session.End.Format(clockLayout))
+			handleFatalError(err)
 
-		separator0, err := gtk.SeparatorNew(gtk.ORIENTATION_VERTICAL)
-		handleFatalError(err)
+			separator0, err := gtk.SeparatorNew(gtk.ORIENTATION_VERTICAL)
+			handleFatalError(err)
 
-		duration := session.End.Sub(session.Start).Round(time.Second)
-		durationLabel, err := gtk.LabelNew("Duration: " + duration.String())
-		handleFatalError(err)
+			duration := session.End.Sub(session.Start).Round(time.Second)
+			durationLabel, err := gtk.LabelNew("Duration: " + duration.String())
+			handleFatalError(err)
 
-		separator1, err := gtk.SeparatorNew(gtk.ORIENTATION_VERTICAL)
-		handleFatalError(err)
+			separator1, err := gtk.SeparatorNew(gtk.ORIENTATION_VERTICAL)
+			handleFatalError(err)
 
-		box.Add(startLabel)
-		box.Add(separator0)
-		box.Add(endLabel)
-		box.Add(separator1)
-		box.Add(durationLabel)
-		listBox.Insert(box, i)
+			editButton, err := gtk.ButtonNewFromIconName("gtk-edit", gtk.ICON_SIZE_BUTTON)
+			handleFatalError(err)
+
+			box.Add(startLabel)
+			box.Add(separator0)
+			box.Add(endLabel)
+			box.Add(separator1)
+			box.Add(durationLabel)
+			box.Add(editButton)
+			listBox.Insert(box, i)
+			listBox.GetRowAtIndex(i).SetName(session.UUID.String())
+		}
 	}
 	listBox.ShowAll()
 }
@@ -187,6 +208,36 @@ func stopSession(builder *gtk.Builder) {
 	}
 	go updateActiveSession(builder)
 	go updateSessions(builder)
+}
+
+func getSessionById(sessions []session, id string) (session, error) {
+	var err error
+	for _, session := range sessions {
+		if session.UUID.String() == id {
+			return session, err
+		}
+	}
+	err = errors.New("no session found")
+	return session{}, err
+}
+
+func getRowByName(listBox *gtk.ListBox, name string) (*gtk.Widget, error) {
+	var (
+		result *gtk.Widget
+		err    error
+	)
+	listBox.GetChildren().Foreach(func(item interface{}) {
+		widgetName, err := item.(*gtk.Widget).GetName()
+		handleFatalError(err)
+		if widgetName == name {
+			result = item.(*gtk.Widget)
+			return
+		}
+	})
+	if result == nil {
+		err = errors.New("no listbox found")
+	}
+	return result, err
 }
 
 func handleFatalError(err error) {
