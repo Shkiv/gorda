@@ -19,8 +19,9 @@ type session struct {
 }
 
 const (
-	SPACING         int           = 5
-	UPDATE_INTERVAL time.Duration = 5 * time.Second
+	SPACING              int           = 5
+	UPDATE_INTERVAL      time.Duration = 5 * time.Second
+	DURATION_LABEL_WIDTH int           = 20
 )
 
 var clockLayout string = "15:04"
@@ -157,27 +158,18 @@ func updateSessions(builder *gtk.Builder) {
 	for i, session := range sessions {
 		_, err := getRowByName(listBox, session.UUID.String())
 		if err != nil {
-			box, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, SPACING)
-			handleFatalError(err)
-
-			startLabel, err := gtk.LabelNew("Start: " + session.Start.Format(clockLayout))
-			handleFatalError(err)
-
-			endLabel, err := gtk.LabelNew("End: " + session.End.Format(clockLayout))
-			handleFatalError(err)
-
-			separator0, err := gtk.SeparatorNew(gtk.ORIENTATION_VERTICAL)
-			handleFatalError(err)
+			box, _ := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, SPACING)
+			startLabel, _ := gtk.LabelNew("Start: " + session.Start.Format(clockLayout))
+			endLabel, _ := gtk.LabelNew("End: " + session.End.Format(clockLayout))
+			separator0, _ := gtk.SeparatorNew(gtk.ORIENTATION_VERTICAL)
 
 			duration := session.End.Sub(session.Start).Round(time.Second)
-			durationLabel, err := gtk.LabelNew("Duration: " + duration.String())
-			handleFatalError(err)
+			durationLabel, _ := gtk.LabelNew("Duration: " + duration.String())
+			durationLabel.SetXAlign(0)
+			durationLabel.SetWidthChars(DURATION_LABEL_WIDTH)
 
-			separator1, err := gtk.SeparatorNew(gtk.ORIENTATION_VERTICAL)
-			handleFatalError(err)
-
-			editButton, err := gtk.ButtonNewFromIconName("gtk-edit", gtk.ICON_SIZE_BUTTON)
-			handleFatalError(err)
+			separator1, _ := gtk.SeparatorNew(gtk.ORIENTATION_VERTICAL)
+			editButton, _ := gtk.ButtonNewFromIconName("gtk-edit", gtk.ICON_SIZE_BUTTON)
 
 			box.Add(startLabel)
 			box.Add(separator0)
