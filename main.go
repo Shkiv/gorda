@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,7 +25,10 @@ const (
 	DURATION_LABEL_WIDTH int           = 20
 )
 
-var clockLayout string = "15:04"
+var (
+	mainWindow  *gtk.Window
+	clockLayout string = "15:04"
+)
 
 func main() {
 	gtk.Init(nil)
@@ -38,8 +42,8 @@ func main() {
 	windowObject, err := builder.GetObject("main_window")
 	handleFatalError(err)
 
-	window := windowObject.(*gtk.Window)
-	window.Connect("destroy", func() {
+	mainWindow = windowObject.(*gtk.Window)
+	mainWindow.Connect("destroy", func() {
 		gtk.MainQuit()
 	})
 
@@ -71,7 +75,7 @@ func main() {
 		}
 	}()
 
-	window.ShowAll()
+	mainWindow.ShowAll()
 	gtk.Main()
 }
 
@@ -170,6 +174,20 @@ func updateSessions(builder *gtk.Builder) {
 
 			separator1, _ := gtk.SeparatorNew(gtk.ORIENTATION_VERTICAL)
 			editButton, _ := gtk.ButtonNewFromIconName("gtk-edit", gtk.ICON_SIZE_BUTTON)
+			editButton.Connect("clicked", func() {
+				window, _ := gtk.DialogNew()
+				editBoxWidget, _ := window.GetChild()
+				editBox := editBoxWidget.(*gtk.Box)
+				editBox.SetSpacing(SPACING)
+
+				startBox := buildTimeBox("Start: ", session.Start.Hour(), session.Start.Minute())
+				editBox.Add(startBox)
+
+				endBox := buildTimeBox("End: ", session.End.Hour(), session.End.Minute())
+				editBox.Add((endBox))
+
+				window.ShowAll()
+			})
 
 			box.Add(startLabel)
 			box.Add(separator0)
@@ -230,6 +248,29 @@ func getRowByName(listBox *gtk.ListBox, name string) (*gtk.Widget, error) {
 		err = errors.New("no listbox found")
 	}
 	return result, err
+}
+
+func buildTimeBox(label string, hours int, minutes int) *gtk.Box {
+	box, _ := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, SPACING)
+	gtkLabel, _ := gtk.LabelNew(label)
+	gtkLabel.SetWidthChars(10)
+	box.Add(gtkLabel)
+
+	hoursEntry, _ := gtk.EntryNew()
+	hoursEntry.SetWidthChars(2)
+	hoursEntry.SetText(strconv.Itoa(hours))
+	hoursEntry.GrabFocus()
+	box.Add(hoursEntry)
+
+	colonLabel, _ := gtk.LabelNew(":")
+	box.Add(colonLabel)
+
+	minutesEntry, _ := gtk.EntryNew()
+	minutesEntry.SetWidthChars(2)
+	minutesEntry.SetText(strconv.Itoa(minutes))
+	box.Add(minutesEntry)
+
+	return box
 }
 
 func handleFatalError(err error) {
